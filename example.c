@@ -22,8 +22,8 @@ volatile unsigned *gpio;
 #define OUT_GPIO(g) *(gpio+((g)/10)) |=  (1<<(((g)%10)*3))
 #define SET_GPIO_ALT(g,a) *(gpio+(((g)/10))) |= (((a)<=3?(a)+4:(a)==4?3:2)<<(((g)%10)*3))
 
-#define GPIO_SET *(gpio+7)  // sets   bits which are 1 ignores bits which are 0
-#define GPIO_CLR *(gpio+10) // clears bits which are 1 ignores bits which are 0
+#define GPIO_SET(pin) *(gpio+7) = 1<<(pin)  // sets   bits which are 1 ignores bits which are 0
+#define GPIO_CLR(pin) *(gpio+10) = 1<<(pin) // clears bits which are 1 ignores bits which are 0
 
 void setup_io();
 
@@ -40,12 +40,12 @@ int main(int argc, char **argv) {
   OUT_GPIO(22);
 
   for (rep=0; rep<10; rep++) {
-    GPIO_SET = 1<<17;
+    GPIO_SET(17);
     sleep(1);
-    GPIO_SET = 1<<22;
-    GPIO_CLR = 1<<17;
+    GPIO_SET(22);
+    GPIO_CLR(17);
     sleep(1);
-    GPIO_CLR = 1<<22;
+    GPIO_CLR(22);
   }
 
   return 0;
