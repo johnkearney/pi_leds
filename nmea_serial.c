@@ -12,6 +12,7 @@
 #define SERIAL_DEVICE "/dev/ttyAMA0"
 #define NMEA_MAX 82
 
+int parse_sentence(const char* str);
 int setup_uart();
 
 int main() {
@@ -102,3 +103,32 @@ int setup_uart() {
 
     return fd;
 }
+
+int parse_sentence(const char* str) {
+  // sendable messages
+  //
+  // $IIDBT Depth below transducer
+  // $IIVHW Speed t. Water
+  // $IIMTW Water Temperature
+  // $IIVLW Total / Trip Mileage
+  // $IIMWV Wind angle & Wind speed
+  // $IIHDM Heading compass
+  // $IIRMC Speed over ground, Course over ground, Latitude, Longitude,
+     //UTC time, Date
+  // Optional an additional $IIGLL sentence can be sent for position information
+  // $IIRSA Rudder Position
+  // $STALK special SeaTalk datagram
+  // $SNBSE special system configuration datagram
+
+  // messages types seen so far
+  //
+  // IIVHW - Speed t. Water           - $IIVHW,287.,T,288.,M,,,,
+  // IIHDM - Heading magnetics        - $IIHDM,289.,M
+  // IIHDT - Heading true             - $IIHDT,286.,T
+  // IIHSC - Command heading to steer - $IIHSC,289.,T,290.,M
+
+
+
+  return 0;
+}
+
