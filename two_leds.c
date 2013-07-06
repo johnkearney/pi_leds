@@ -13,46 +13,42 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-// I/O access
-volatile unsigned *gpio;
-
+volatile unsigned* setup_io();
 
 // GPIO setup macros. Always use INP_GPIO(x) before using OUT_GPIO(x) or SET_GPIO_ALT(x,y)
-#define INP_GPIO(g) *(gpio+((g)/10)) &= ~(7<<(((g)%10)*3))
-#define OUT_GPIO(g) *(gpio+((g)/10)) |=  (1<<(((g)%10)*3))
-#define SET_GPIO_ALT(g,a) *(gpio+(((g)/10))) |= (((a)<=3?(a)+4:(a)==4?3:2)<<(((g)%10)*3))
+#define INP_GPIO(gpio,g) *((gpio)+((g)/10)) &= ~(7<<(((g)%10)*3))
+#define OUT_GPIO(gpio,g) *((gpio)+((g)/10)) |=  (1<<(((g)%10)*3))
+#define SET_GPIO_ALT(gpio,g,a) *((gpio)+(((g)/10))) |= (((a)<=3?(a)+4:(a)==4?3:2)<<(((g)%10)*3))
 
-#define GPIO_SET(pin) *(gpio+7) = 1<<(pin)  // sets   bits which are 1 ignores bits which are 0
-#define GPIO_CLR(pin) *(gpio+10) = 1<<(pin) // clears bits which are 1 ignores bits which are 0
-
-void setup_io();
+#define GPIO_SET(gpio,pin) *((gpio)+7) = 1<<(pin)  // sets   bits which are 1 ignores bits which are 0
+#define GPIO_CLR(gpio,pin) *((gpio)+10) = 1<<(pin) // clears bits which are 1 ignores bits which are 0
 
 int main(int argc, char **argv) {
   int rep;
 
   // Set up gpi pointer for direct register access
-  setup_io();
+  volatile unsigned *gpio = setup_io();
 
   // Switch GPIO 17, 22 to output mode
-  INP_GPIO(17); // must use INP_GPIO before we can use OUT_GPIO
-  OUT_GPIO(17);
-  INP_GPIO(22); // must use INP_GPIO before we can use OUT_GPIO
-  OUT_GPIO(22);
+  INP_GPIO(gpio, 17); // must use INP_GPIO before we can use OUT_GPIO
+  OUT_GPIO(gpio, 17);
+  INP_GPIO(gpio, 22); // must use INP_GPIO before we can use OUT_GPIO
+  OUT_GPIO(gpio, 22);
 
   for (rep=0; rep<10; rep++) {
-    GPIO_SET(17);
+    GPIO_SET(gpio, 17);
     sleep(1);
-    GPIO_SET(22);
-    GPIO_CLR(17);
+    GPIO_SET(gpio, 22);
+    GPIO_CLR(gpio, 17);
     sleep(1);
-    GPIO_CLR(22);
+    GPIO_CLR(gpio, 22);
   }
 
   return 0;
 }
 
 // Set up a memory regions to access GPIO
-void setup_io() {
+volatile unsigned* setup_io() {
    int mem_fd;
 
    /* open /dev/mem */
@@ -79,6 +75,6 @@ void setup_io() {
    }
 
    // Always use volatile pointer!
-   gpio = (volatile unsigned *)gpio_map;
+   return (volatile unsigned *)gpio_map;
 }
 
