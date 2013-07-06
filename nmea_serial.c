@@ -9,7 +9,7 @@
 #include <fcntl.h>
 #include <termios.h>
 
-#define SERIAL_DEVICE "/dev/ttyAMA0"
+#define SERIAL_DEVICE "/dev/ttyUSB0"
 #define NMEA_MAX 82
 
 int parse_sentence(const char* str);
@@ -45,7 +45,8 @@ int main() {
         } else {
             //Bytes received
             rx_buffer[rx_length] = '\0';
-            printf("%i bytes read : %s\n", rx_length, rx_buffer);
+            puts(rx_buffer);
+            //printf("%i bytes read : %s\n", rx_length, rx_buffer);
         }
     }
     
@@ -74,7 +75,8 @@ int setup_uart() {
     //                                          immediately with a failure status if the output can't be written immediately.
     //
     //  O_NOCTTY - When set and path identifies a terminal device, open() shall not cause the terminal device to become the controlling terminal for the process.
-    int fd = open(SERIAL_DEVICE, O_RDWR | O_NOCTTY | O_NDELAY);      //Open in non blocking read/write mode
+    //int fd = open(SERIAL_DEVICE, O_RDWR | O_NOCTTY | O_NDELAY);      //Open in non blocking read/write mode
+    int fd = open(SERIAL_DEVICE, O_RDWR | O_NOCTTY);      //Open in non blocking read/write mode
     if (fd == -1) {
         printf("Error - Unable to open UART.  Ensure it is not in use by another application\n");
         return -1;
