@@ -58,25 +58,8 @@ int main() {
 }
 
 int setup_uart() {
-    //-------------------------
-    //----- SETUP USART 0 -----
-    //-------------------------
-    //At bootup, pins 8 and 10 are already set to UART0_TXD, UART0_RXD (ie the alt0 function) respectively
-    //
-    //OPEN THE UART
-    //The flags (defined in fcntl.h):
-    //  Access modes (use 1 of these):
-    //      O_RDONLY - Open for reading only.
-    //      O_RDWR - Open for reading and writing.
-    //      O_WRONLY - Open for writing only.
-    //
-    //  O_NDELAY / O_NONBLOCK (same function) - Enables nonblocking mode. When set read requests on the file can return immediately with a failure status
-    //                                          if there is no input immediately available (instead of blocking). Likewise, write requests can also return
-    //                                          immediately with a failure status if the output can't be written immediately.
-    //
-    //  O_NOCTTY - When set and path identifies a terminal device, open() shall not cause the terminal device to become the controlling terminal for the process.
-    //int fd = open(SERIAL_DEVICE, O_RDWR | O_NOCTTY | O_NDELAY);      //Open in non blocking read/write mode
-    int fd = open(SERIAL_DEVICE, O_RDWR | O_NOCTTY);      //Open in non blocking read/write mode
+    //  O_NOCTTY - shall not cause the terminal device to become the controlling terminal for the process.
+    int fd = open(SERIAL_DEVICE, O_RDWR | O_NOCTTY);
     if (fd == -1) {
         printf("Error - Unable to open UART.  Ensure it is not in use by another application\n");
         return -1;
@@ -89,9 +72,10 @@ int setup_uart() {
         return -1;
     }
     options.c_cflag = B4800 | CS8 | CLOCAL | CREAD;
-    options.c_iflag = IGNPAR | ICRNL;
+    options.c_iflag = IGNPAR; // ignore partity
     options.c_oflag = 0;
-    options.c_lflag = 0;
+    options.c_lflag = ICANON; // line-by-line
+
     if (tcflush(fd, TCIFLUSH) != 0) {
         printf("error %d from tcflush", errno);
         close(fd);
@@ -107,29 +91,12 @@ int setup_uart() {
 }
 
 int parse_sentence(const char* str) {
-  // sendable messages
-  //
-  // $IIDBT Depth below transducer
-  // $IIVHW Speed t. Water
-  // $IIMTW Water Temperature
-  // $IIVLW Total / Trip Mileage
-  // $IIMWV Wind angle & Wind speed
-  // $IIHDM Heading compass
-  // $IIRMC Speed over ground, Course over ground, Latitude, Longitude,
-     //UTC time, Date
-  // Optional an additional $IIGLL sentence can be sent for position information
-  // $IIRSA Rudder Position
-  // $STALK special SeaTalk datagram
-  // $SNBSE special system configuration datagram
-
   // messages types seen so far
   //
   // IIVHW - Speed t. Water           - $IIVHW,287.,T,288.,M,,,,
   // IIHDM - Heading magnetics        - $IIHDM,289.,M
   // IIHDT - Heading true             - $IIHDT,286.,T
   // IIHSC - Command heading to steer - $IIHSC,289.,T,290.,M
-
-
 
   return 0;
 }
