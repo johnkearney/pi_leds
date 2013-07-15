@@ -9,25 +9,29 @@
 #include <unistd.h>
 
 volatile unsigned* setup_io();
-int readAdc(volatile unsigned *gpio, int adcnum, int clockpin, int mosipin, int misopin, int cspin);
+unsigned readAdc(unsigned adcnum);
 
 // GPIO setup macros. Always use INP_GPIO(x) before using OUT_GPIO(x) or SET_GPIO_ALT(x,y)
 #define INP_GPIO(gpio,g) *((gpio)+((g)/10)) &= ~(7<<(((g)%10)*3))
 #define OUT_GPIO(gpio,g) *((gpio)+((g)/10)) |=  (1<<(((g)%10)*3))
 #define SET_GPIO_ALT(gpio,g,a) *((gpio)+(((g)/10))) |= (((a)<=3?(a)+4:(a)==4?3:2)<<(((g)%10)*3))
 
-#define GPIO_SET(gpio,pin) *((gpio)+7) = 1<<(pin)  // sets   bits which are 1 ignores bits which are 0
-#define GPIO_CLR(gpio,pin) *((gpio)+10) = 1<<(pin) // clears bits which are 1 ignores bits which are 0
-#define GPIO_READ(gpio, pin) (*((gpio)+13) & (1 << (pin)) != 0)
+#define GPIO_SET(gpio,pin) *((gpio)+7) = 1<<(pin); usleep(1) // sets   bits which are 1 ignores bits which are 0
+#define GPIO_CLR(gpio,pin) *((gpio)+10) = 1<<(pin); usleep(1) // clears bits which are 1 ignores bits which are 0
+#define GPIO_READ(gpio, pin) (((*((gpio)+13)) & (1 << (pin))) != 0)
 
 #define SPICLK  (18)
 #define SPIMISO (23)
 #define SPIMOSI (24)
 #define SPICS   (25)
 
+volatile unsigned *gpio;
+
 int main(int argc, char **argv) {
+  unsigned sin_raw, cos_raw;
+
   // Set up gpi pointer for direct register access
-  volatile unsigned *gpio = setup_io();
+  gpio = setup_io();
 
   // set up the SPI interface pins
   INP_GPIO(gpio, SPIMOSI);
@@ -39,10 +43,10 @@ int main(int argc, char **argv) {
   OUT_GPIO(gpio, SPICS);
 
   for (;;) {
-    int sin_raw = readadc(gpio, 1, SPICLK, SPIMOSI, SPIMISO, SPICS);
-    int cos_raw = readadc(gpio, 1, SPICLK, SPIMOSI, SPIMISO, SPICS);
+    sin_raw = readAdc(1);
+    cos_raw = readAdc(2);
     printf("%d %d\n", sin_raw, cos_raw);
-    sleep(1);
+    usleep(200);
   }
 
   return 0;
@@ -80,53 +84,45 @@ volatile unsigned* setup_io() {
 }
 
 // read SPI data from MCP3008 chip, 8 possible adc's (0 thru 7)
-int readAdc(volatile unsigned *gpio, int adcnum, int clockpin, int mosipin, int misopin, int cspin) {
+unsigned readAdc(unsigned adcnum) {
   int i;
 
   if ((adcnum > 7) || (adcnum < 0)) {
     return -1;
   }
-  GPIO_SET(gpio, cspin);
-  //GPIO.output(cspin, True)
-
-  GPIO_CLR(gpio, clockpin);
-  //GPIO.output(clockpin, False)  // start clock low
-  GPIO_CLR(gpio, cspin);
-  //GPIO.output(cspin, False)     // bring CS low
+  GPIO_SET(gpio, SPICS);
+  GPIO_CLR(gpio, SPICLK);
+  GPIO_CLR(gpio, SPICS);
 
   // start bit + single-ended bit, we only need to send 5 bits here
-  int commandout = (adcnum | 0x18) << 3;
+  unsigned commandout = adcnum;
+  commandout |= 0x18;  // start bit + single-ended bit
+  commandout <<= 3;    // we only need to send 5 bits here
+
+  // unsigned commandout = (adcnum | 0x18) << 3;
   for (i=0; i<5; i++) {
     if (commandout & 0x80) {
-      GPIO_SET(gpio, mosipin);
-      //GPIO.output(mosipin, True)
+      GPIO_SET(gpio, SPIMOSI);
     } else {
-      GPIO_CLR(gpio, mosipin);
-      //GPIO.output(mosipin, False)
+      GPIO_CLR(gpio, SPIMOSI);
     }
-    commandout <<= 1
-    GPIO_SET(gpio, clockpin);
-    //GPIO.output(clockpin, True)
-    GPIO_CLR(gpio, clockpin);
-    //GPIO.output(clockpin, False)
+    commandout <<= 1;
+    GPIO_SET(gpio, SPICLK);
+    GPIO_CLR(gpio, SPICLK);
   }
 
-  int adcout = 0;
+  unsigned adcout = 0;
   // read in one empty bit, one null bit and 10 ADC bits
   for (i=0; i<12; i++) {
-    GPIO_SET(gpio, clockpin);
-    //GPIO.output(clockpin, True)
-    GPIO_CLR(gpio, clockpin);
-    //GPIO.output(clockpin, False)
+    GPIO_SET(gpio, SPICLK);
+    GPIO_CLR(gpio, SPICLK);
     adcout <<= 1;
-    //if (GPIO.input(misopin)) {
-    if (GPIO_READ(gpio, misopin)) {
+    if (GPIO_READ(gpio, SPIMISO)) {
       adcout |= 0x1;
     }
   }
 
-  GPIO_SET(gpio, cspin);
-  //GPIO.output(cspin, True)
+  GPIO_SET(gpio, SPICS);
   
   adcout >>= 1;       // first bit is 'null' so drop it
   return adcout;

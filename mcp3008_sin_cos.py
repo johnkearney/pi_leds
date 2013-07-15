@@ -77,5 +77,5 @@ while True:
         print sin_raw, cos_raw
 
         # hang out and do nothing for a half second
-        time.sleep(0.5)
+        time.sleep(0.05)
 
